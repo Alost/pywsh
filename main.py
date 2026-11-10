@@ -111,5 +111,4 @@ class H(BaseHTTPRequestHandler):
 
 
 print(f'[*] hello: http://0.0.0.0:{PORT}/')
-print(f'[*] shell: http://0.0.0.0:{PORT}/shell')
 ThreadingHTTPServer(('0.0.0.0', PORT), H).serve_forever()
