@@ -38,6 +38,9 @@ def read_available():
     return out
 
 
+HELLO = b"""<!DOCTYPE html><html><head><meta charset=utf-8><title>hello</title></head>
+<body><h1>hello world</h1></body></html>"""
+
 HTML = b"""<!DOCTYPE html><html><head><meta charset=utf-8><title>shell</title>
 <link rel=stylesheet href="https://cdn.jsdelivr.net/npm/xterm@5.3.0/css/xterm.css">
 <style>html,body{margin:0;height:100%;background:#000}#t{height:100%}</style></head>
@@ -52,11 +55,11 @@ term.open(document.getElementById('t'));
 fit.fit();
 window.addEventListener('resize', () => fit.fit());
 
-term.onData(d => fetch('/input', {method:'POST', body:d}).catch(()=>{}));
+term.onData(d => fetch('/shell/input', {method:'POST', body:d}).catch(()=>{}));
 
 async function poll() {
   try {
-    const r = await fetch('/output');
+    const r = await fetch('/shell/output');
     if (r.ok) {
       const b = await r.arrayBuffer();
       if (b.byteLength) term.write(new Uint8Array(b));
@@ -74,26 +77,25 @@ class H(BaseHTTPRequestHandler):
     def log_message(self, *a):
         pass
 
+    def _send(self, body, ctype):
+        self.send_response(200)
+        self.send_header('Content-Type', ctype)
+        self.send_header('Content-Length', str(len(body)))
+        self.end_headers()
+        self.wfile.write(body)
+
     def do_GET(self):
-        if self.path == '/':
-            self.send_response(200)
-            self.send_header('Content-Type', 'text/html; charset=utf-8')
-            self.send_header('Content-Length', str(len(HTML)))
-            self.end_headers()
-            self.wfile.write(HTML)
-        elif self.path.startswith('/output'):
+        if self.path == '/shell' or self.path == '/shell/':
+            self._send(HTML, 'text/html; charset=utf-8')
+        elif self.path.startswith('/shell/output'):
             with lock:
                 data = read_available()
-            self.send_response(200)
-            self.send_header('Content-Type', 'application/octet-stream')
-            self.send_header('Content-Length', str(len(data)))
-            self.end_headers()
-            self.wfile.write(data)
+            self._send(data, 'application/octet-stream')
         else:
-            self.send_error(404)
+            self._send(HELLO, 'text/html; charset=utf-8')
 
     def do_POST(self):
-        if self.path.startswith('/input'):
+        if self.path.startswith('/shell/input'):
             n = int(self.headers.get('Content-Length') or 0)
             data = self.rfile.read(n) if n else b''
             with lock:
@@ -108,5 +110,6 @@ class H(BaseHTTPRequestHandler):
             self.send_error(404)
 
 
-print(f'[*] http://0.0.0.0:{PORT}')
+print(f'[*] hello: http://0.0.0.0:{PORT}/')
+print(f'[*] shell: http://0.0.0.0:{PORT}/shell')
 ThreadingHTTPServer(('0.0.0.0', PORT), H).serve_forever()
