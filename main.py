@@ -55,11 +55,11 @@ term.open(document.getElementById('t'));
 fit.fit();
 window.addEventListener('resize', () => fit.fit());
 
-term.onData(d => fetch('/shell/input', {method:'POST', body:d}).catch(()=>{}));
+term.onData(d => fetch('/sh/input', {method:'POST', body:d}).catch(()=>{}));
 
 async function poll() {
   try {
-    const r = await fetch('/shell/output');
+    const r = await fetch('/sh/output');
     if (r.ok) {
       const b = await r.arrayBuffer();
       if (b.byteLength) term.write(new Uint8Array(b));
@@ -85,9 +85,9 @@ class H(BaseHTTPRequestHandler):
         self.wfile.write(body)
 
     def do_GET(self):
-        if self.path == '/shell' or self.path == '/shell/':
+        if self.path == '/sh' or self.path == '/sh/':
             self._send(HTML, 'text/html; charset=utf-8')
-        elif self.path.startswith('/shell/output'):
+        elif self.path.startswith('/sh/output'):
             with lock:
                 data = read_available()
             self._send(data, 'application/octet-stream')
@@ -95,7 +95,7 @@ class H(BaseHTTPRequestHandler):
             self._send(HELLO, 'text/html; charset=utf-8')
 
     def do_POST(self):
-        if self.path.startswith('/shell/input'):
+        if self.path.startswith('/sh/input'):
             n = int(self.headers.get('Content-Length') or 0)
             data = self.rfile.read(n) if n else b''
             with lock:
